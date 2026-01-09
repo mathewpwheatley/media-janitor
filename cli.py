@@ -46,6 +46,11 @@ def create_parser() -> argparse.ArgumentParser:
         help="Destination directory for video folders",
     )
     organize_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Run dedupe, fix-dates, and health-check before organizing",
+    )
+    organize_parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Show what would be done without making changes (default: True)",
@@ -162,7 +167,40 @@ def main() -> None:
 
     try:
         if args.command == "organize":
-            print(f"DEBUG: {args}")
+            # Run preparatory commands if --all flag is set
+            if args.all:
+                print("=" * 60)
+                print("Running preparatory commands (--all flag)...")
+                print("=" * 60)
+
+                # Step 1: Dedupe
+                print("\n[1/3] Removing duplicate files...")
+                dedupe(
+                    root=args.source,
+                    dry_run=args.dry_run,
+                )
+
+                # Step 2: Fix dates
+                print("\n[2/3] Fixing file dates...")
+                fix_dates(
+                    root=args.source,
+                    dry_run=args.dry_run,
+                )
+
+                # Step 3: Health check
+                print("\n[3/3] Running health check and cleanup...")
+                health_check(
+                    root=args.source,
+                    dry_run=args.dry_run,
+                    interactive=(not args.no_interactive),
+                    display_thresholds=False,
+                )
+
+                print("\n" + "=" * 60)
+                print("Preparatory commands complete! Starting organization...")
+                print("=" * 60 + "\n")
+
+            # Run organize command
             organize(
                 source=args.source,
                 photo_dest=args.photo_dest,

@@ -4,6 +4,8 @@ import os
 import re
 from datetime import datetime
 from typing import Optional
+import time
+from datetime import datetime
 
 import exifread
 
@@ -11,23 +13,38 @@ from constants import PHOTO_EXT, VIDEO_EXT
 
 
 def extract_date_from_exif(file_path: str) -> Optional[datetime]:
-    """Extract original capture date from EXIF metadata."""
     try:
         with open(file_path, "rb") as f:
-            tags = exifread.process_file(
-                f, stop_tag="EXIF DateTimeOriginal", details=False
-            )
+            tags = exifread.process_file(f, details=False)
             date_tag = tags.get("EXIF DateTimeOriginal")
+            offset_tag = tags.get("EXIF OffsetTimeOriginal")  # e.g. "-08:00"
 
-            if date_tag:
-                try:
-                    return datetime.strptime(str(date_tag), "%Y:%m:%d %H:%M:%S")
-                except (ValueError, IndexError, TypeError):
-                    pass
+            if not date_tag:
+                return None
+
+            # 1. Get the "Naive" time (the Wall Clock time)
+            dt_naive = datetime.strptime(str(date_tag), "%Y:%m:%d %H:%M:%S")
+
+            # 2. Validation Logic (Optional)
+            if offset_tag:
+                # Convert system timezone offset to a string for comparison
+                # e.g., -28800 seconds -> "-08:00"
+                system_offset_sec = (
+                    -time.timezone if time.daylight == 0 else -time.altzone
+                )
+                system_offset_hours = system_offset_sec // 3600
+
+                camera_offset_str = str(offset_tag)
+                # Basic check: Does the camera offset match current system offset?
+                if f"{system_offset_hours:+03d}" not in camera_offset_str:
+                    # We don't change the time, we just note the discrepancy
+                    print(
+                        f"DEBUG: Camera offset {camera_offset_str} differs from system."
+                    )
+
+            return dt_naive
     except Exception:
-        pass
-
-    return None
+        return None
 
 
 def extract_date_from_filename(filename: str) -> Optional[datetime]:
@@ -112,6 +129,7 @@ def fix_dates(root: str, dry_run: bool = True) -> None:
     error_count = 0
 
     for dirpath, _, filenames in os.walk(root):
+        print(f"Checking {len(filenames)} files in {dirpath}")
         for filename in filenames:
             if filename.startswith("."):
                 continue

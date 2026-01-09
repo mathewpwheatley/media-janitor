@@ -19,7 +19,7 @@ A CLI tool for managing and organizing photo/video libraries.
 ```
 __init__.py       # Package initialization and version
 cli.py            # Main CLI entry point with argparse
-common.py         # Shared constants (PHOTO_EXT, VIDEO_EXT), types (FolderAction, Stats)
+constants.py      # Shared constants (PHOTO_EXT, VIDEO_EXT, thresholds)
 organize.py       # Media organization logic
 flatten.py        # Folder flattening logic
 count.py          # Folder statistics logic
@@ -36,9 +36,13 @@ Organize media files from a source directory into dated year/month folder struct
 
 **Key Features:**
 - Classifies folders as photo or video-dominant based on file counts
-- Interactive mode with folder rename, ungroup, accept, or skip options
+- Processes loose files in source root directory individually
+- Interactive mode with folder rename, ungroup, accept, view, or skip options
 - UNGROUP mode: breaks up folders and distributes files individually by their dates
 - Handles EXIF metadata corruption gracefully with fallback to file modification times
+- Shows progress: "Checking X media file(s) in <path>" for each directory
+- Automatically removes empty folders after organization
+- `--all` flag: runs fix-dates, health-check, and dedupe before organizing
 
 **Required Arguments:**
 - `source`: Source directory to scan for media folders
@@ -48,6 +52,15 @@ Organize media files from a source directory into dated year/month folder struct
 **Optional Flags:**
 - `--dry-run`: Show what would be done
 - `--no-interactive`: Run in batch mode without prompting
+- `--all`: Run full pipeline (fix-dates → health-check → dedupe → organize)
+
+**Interactive mode options:**
+- `Enter` = ungroup (distribute files individually)
+- `a` = accept (move folder as-is)
+- `r` = rename (prompt for new name)
+- Type any name = rename to that name directly
+- `v` = view (open folder in Finder to preview)
+- `s` = skip
 
 **Supported formats:**
 - Photos: `.jpg`, `.jpeg`, `.png`, `.heic`, `.tif`, `.tiff`, `.nef`, `.cr2`, `.arw`
@@ -160,6 +173,9 @@ media-janitor organize "/Incoming" "/Photos" "/Videos" --dry-run
 
 # Execute organization
 media-janitor organize "/Incoming" "/Photos" "/Videos"
+
+# Full pipeline: fix dates, health check, dedupe, then organize
+media-janitor organize "/Incoming" "/Photos" "/Videos" --all
 
 # Flatten a folder structure (dry-run)
 media-janitor flatten "/path/to/source" --dry-run
