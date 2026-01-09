@@ -1,44 +1,95 @@
 import os
 import argparse
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Set
+from dataclasses import dataclass
 
-def get_folder_stats(root_path: Path) -> Dict[Path, int]:
-    """
-    Recursively counts files in folders and aggregates sums for parents.
-    Returns a dictionary mapping folder paths to total file counts.
-    """
-    stats: Dict[Path, int] = {}
+PHOTO_EXT: Set[str] = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".heic",
+    ".tif",
+    ".tiff",
+    ".nef",
+    ".cr2",
+    ".arw",
+}
 
-    # Walk bottom-up so we process children before parents
+VIDEO_EXT: Set[str] = {".mp4", ".mov", ".avi", ".mkv", ".mts"}
+
+
+@dataclass
+class Stats:
+    Photo: int = 0
+    Video: int = 0
+    Other: int = 0
+
+    def __iadd__(self, other: "Stats") -> "Stats":
+        self.Photo += other.Photo
+        self.Video += other.Video
+        self.Other += other.Other
+        return self
+
+
+def get_folder_stats(root_path: Path) -> Dict[Path, Stats]:
+    """
+    Recursively counts photo, video, and other files in folders and
+    aggregates totals for parent folders.
+    Returns a dictionary mapping folder paths to Stats.
+    """
+    stats: Dict[Path, Stats] = {}
+
+    # Walk bottom-up so children are processed before parents
     for root, dirs, files in os.walk(root_path, topdown=False):
-        current_path = Path(root)
+        current_path: Path = Path(root)
+        current_stats: Stats = Stats()
 
-        # Count files in the immediate folder (ignoring hidden files)
-        current_file_count = len([f for f in files if not f.startswith('.')])
+        # Count files in the immediate folder
+        for filename in files:
+            if filename.startswith("."):
+                continue
 
-        # Add the counts from immediate subdirectories already processed
-        subfolder_total = sum(stats.get(current_path / d, 0) for d in dirs)
+            ext: str = Path(filename).suffix.lower()
 
-        stats[current_path] = current_file_count + subfolder_total
+            if ext in PHOTO_EXT:
+                current_stats.Photo += 1
+            elif ext in VIDEO_EXT:
+                current_stats.Video += 1
+            else:
+                current_stats.Other += 1
+
+        # Add stats from subdirectories
+        for d in dirs:
+            child_path: Path = current_path / d
+            if child_path in stats:
+                current_stats += stats[child_path]
+
+        stats[current_path] = current_stats
 
     return stats
 
-def print_tree(path: Path, stats: Dict[Path, int], prefix: str = "") -> None:
+
+def print_tree(path: Path, stats: Dict[Path, Stats], prefix: str = "") -> None:
     """
     Prints a visual tree structure of the folders with their aggregated file counts.
     """
-    count = stats.get(path, 0)
+    counts = stats.get(path, Stats())
     # Highlight the folder name and its count
-    print(f"{prefix}└── {path.name}/ ({count} files)")
+    print(
+        f"{prefix}└── {path.name}/ (Photos: {counts.Photo}, Videos: {counts.Video}, Other: {counts.Other})"
+    )
 
     # Get immediate subdirectories
-    subdirs = sorted([d for d in path.iterdir() if d.is_dir() and not d.name.startswith('.')])
+    subdirs = sorted(
+        [d for d in path.iterdir() if d.is_dir() and not d.name.startswith(".")]
+    )
 
     for i, subdir in enumerate(subdirs):
         # Adjust indentation for the tree visual
         new_prefix = prefix + "    "
         print_tree(subdir, stats, new_prefix)
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Count files in folders recursively.")
@@ -57,6 +108,7 @@ def main() -> None:
     folder_stats = get_folder_stats(root_path)
     print_tree(root_path, folder_stats)
     print("-" * 40)
+
 
 if __name__ == "__main__":
     main()

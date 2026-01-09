@@ -3,7 +3,7 @@ import shutil
 from collections import Counter
 from datetime import datetime
 from enum import Enum, auto
-from typing import List, Tuple, Dict, Set, Optional
+from typing import List, Tuple, Set, Optional
 import exifread
 
 # --- Configuration ---
@@ -11,11 +11,22 @@ ROOT: str = "/Volumes/Family/Incoming"
 PHOTO_ROOT: str = "/Volumes/Family/Photos"
 VIDEO_ROOT: str = "/Volumes/Family/Videos"
 
-PHOTO_EXT: Set[str] = {".jpg", ".jpeg", ".png", ".heic", ".tif", ".tiff", ".nef", ".cr2", ".arw"}
+PHOTO_EXT: Set[str] = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".heic",
+    ".tif",
+    ".tiff",
+    ".nef",
+    ".cr2",
+    ".arw",
+}
 VIDEO_EXT: Set[str] = {".mp4", ".mov", ".avi", ".mkv", ".mts"}
 
 DRY_RUN: bool = True  # Set to False to actually move files
 INTERACTIVE: bool = True
+
 
 class FolderAction(Enum):
     ACCEPT = auto()
@@ -23,14 +34,18 @@ class FolderAction(Enum):
     UNGROUP = auto()
     SKIP = auto()
 
+
 # --- Functions ---
+
 
 def get_photo_date(path: str) -> datetime:
     """Attempts to extract EXIF date, falls back to file modification time."""
     try:
         with open(path, "rb") as f:
             # We add details=False to skip complex tag parsing that often causes slice errors
-            tags = exifread.process_file(f, stop_tag="EXIF DateTimeOriginal", details=False)
+            tags = exifread.process_file(
+                f, stop_tag="EXIF DateTimeOriginal", details=False
+            )
             date_tag = tags.get("EXIF DateTimeOriginal")
 
             if date_tag:
@@ -41,9 +56,12 @@ def get_photo_date(path: str) -> datetime:
                     print(f"  [!] Metadata corruption in {os.path.basename(path)}: {e}")
     except Exception as e:
         # Catch-all for exifread internal errors like "Unexpected slice length"
-        print(f"  [!] Could not parse EXIF for {os.path.basename(path)}. Using file date.")
+        print(
+            f"  [!] Could not parse EXIF for {os.path.basename(path)}. Using file date."
+        )
 
     return datetime.fromtimestamp(os.path.getmtime(path))
+
 
 def classify_folder(folder_path: str) -> Tuple[List[datetime], int, int]:
     """Scans folder for media and returns dates and counts."""
@@ -53,7 +71,8 @@ def classify_folder(folder_path: str) -> Tuple[List[datetime], int, int]:
 
     for root, _, files in os.walk(folder_path):
         for name in files:
-            if name.startswith('.'): continue
+            if name.startswith("."):
+                continue
             ext = os.path.splitext(name.lower())[1]
             path = os.path.join(root, name)
 
@@ -66,12 +85,16 @@ def classify_folder(folder_path: str) -> Tuple[List[datetime], int, int]:
 
     return dates, photo_count, video_count
 
+
 def choose_target_date(dates: List[datetime]) -> Tuple[int, int]:
     """Finds the most frequent Year and Month in the date list."""
     counts = Counter((d.year, d.month) for d in dates)
     return counts.most_common(1)[0][0]
 
-def prompt_user(name: str, year: int, month: int, count: int) -> Tuple[FolderAction, str]:
+
+def prompt_user(
+    name: str, year: int, month: int, count: int
+) -> Tuple[FolderAction, str]:
     """Prompts user for action and returns the Action Enum and the folder name."""
     print(f"\nFolder: {name}")
     print(f"Target: {year}/{month:02d}/")
@@ -88,11 +111,13 @@ def prompt_user(name: str, year: int, month: int, count: int) -> Tuple[FolderAct
         return FolderAction.SKIP, name
     return FolderAction.ACCEPT, name
 
+
 def move_individual_files(src_folder: str, photo_root: str, video_root: str) -> None:
     """Moves files out of the folder individually into YYYY/MM/ structure."""
     for root, _, files in os.walk(src_folder):
         for name in files:
-            if name.startswith('.'): continue
+            if name.startswith("."):
+                continue
 
             path = os.path.join(root, name)
             ext = os.path.splitext(name.lower())[1]
@@ -127,7 +152,10 @@ def move_individual_files(src_folder: str, photo_root: str, video_root: str) -> 
         except Exception as e:
             print(f"  [!] Could not delete folder {src_folder}: {e}")
 
-def move_entire_folder(src: str, dest_root: str, year: int, month: int, name: str) -> None:
+
+def move_entire_folder(
+    src: str, dest_root: str, year: int, month: int, name: str
+) -> None:
     """Moves the entire directory into the Year/Month structure."""
     dest_dir = os.path.join(dest_root, str(year), f"{month:02d}")
     os.makedirs(dest_dir, exist_ok=True)
@@ -143,7 +171,9 @@ def move_entire_folder(src: str, dest_root: str, year: int, month: int, name: st
         print(f"  --> Moving folder: {name} into {year}/{month:02d}/")
         shutil.move(src, dest_path)
 
+
 # --- Main Logic ---
+
 
 def main() -> None:
     if not os.path.exists(ROOT):
@@ -183,6 +213,7 @@ def main() -> None:
         else:
             # Covers ACCEPT and RENAME
             move_entire_folder(folder_path, target_root, year, month, final_name)
+
 
 if __name__ == "__main__":
     main()
