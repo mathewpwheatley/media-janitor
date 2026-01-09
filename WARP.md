@@ -7,8 +7,8 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 A CLI tool for managing and organizing photo/video libraries.
 
 **Core Architecture:**
-- Unified CLI tool (`media-janitor`) with six subcommands
-- Most commands support dry-run mode to preview changes
+- Unified CLI tool (`media-janitor`) with seven subcommands
+- Commands execute by default; use `--dry-run` flag to preview changes without executing
 - Most commands support interactive mode by default so changes can be reviewed before execution
 - Uses EXIF metadata extraction for photo date detection with graceful fallback to file modification times
 - Uses content hashing (MD5) for reliable duplicate detection
@@ -26,6 +26,7 @@ count.py          # Folder statistics logic
 dedupe.py         # Duplicate file detection and removal using MD5 hashing
 fix_dates.py      # Fix file dates using EXIF metadata or filename patterns
 health_check.py   # Media library health scanning (corruption, thumbnails, ghost files)
+assign_date.py    # Assign a specific date to all files in a folder
 pyproject.toml    # Package configuration and dependencies
 ```
 
@@ -155,6 +156,30 @@ Pre-2000 photos:
 - `v` = view/preview file (opens in default viewer)
 - `s` or Enter = skip file
 
+### media-janitor assign-date
+Assign a specific date to a media file or all media files in a folder.
+
+**Key Features:**
+- Works with single files or entire folders
+- Flexible date format support (year only, year-month, full datetime, etc.)
+- Smart defaults for missing date components (uses middle of period)
+- Only processes media files (photos and videos)
+- Shows before/after dates for each file
+
+**Arguments:**
+- `source`: Source file or folder (required)
+- `date`: Date to assign (required)
+
+**Flags:**
+- `--dry-run`: Show what would be done without making changes
+
+**Supported date formats and defaults:**
+- `YYYY` (e.g., `2020`) → July 1, 2020 12:00:00 (middle of year)
+- `YYYY-MM` (e.g., `2020-06`) → June 15, 2020 12:00:00 (middle of month)
+- `YYYY-MM-DD` (e.g., `2020-06-15`) → June 15, 2020 12:00:00 (noon)
+- `YYYY-MM-DD HH:MM` (e.g., `2020-06-15 14:30`) → June 15, 2020 14:30:00
+- `YYYY-MM-DD HH:MM:SS` (e.g., `2020-06-15 14:30:45`) → Exact datetime
+
 ## Development Commands
 
 ### Environment Setup
@@ -207,10 +232,19 @@ media-janitor health-check "/Photos" --no-interactive
 # Delete problematic files (interactive mode - review each file)
 media-janitor health-check "/Photos"
 
+# Assign date to all files in a folder (executes immediately)
+media-janitor assign-date "/Photos/OldFolder" "1995"
+
+# Assign specific date (dry-run)
+media-janitor assign-date "/Photos/Vacation" "2020-07-15" --dry-run
+
+# Assign full datetime
+media-janitor assign-date "/Photos/Event" "2020-07-15 18:30:00"
+
 # View command help
 media-janitor --help
 media-janitor organize --help
-media-janitor dedupe --help
+media-janitor assign-date --help
 ```
 
 ### Testing Changes

@@ -17,4 +17,4 @@ dependencies = [
 media-janitor = "cli:main"
 
 [tool.setuptools]
-py-modules = ["__init__", "cli", "constants", "organize", "flatten", "count", "dedupe", "fix_dates", "health_check"]
+py-modules = ["__init__", "cli", "constants", "organize", "flatten", "count", "dedupe", "fix_dates", "health_check", "assign_date"]

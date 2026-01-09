@@ -11,6 +11,7 @@ from count import display_count
 from dedupe import dedupe
 from fix_dates import fix_dates
 from health_check import health_check
+from assign_date import assign_date
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -153,6 +154,26 @@ def create_parser() -> argparse.ArgumentParser:
         help="Run in batch mode without prompting for actions",
     )
 
+    # Assign-date command
+    assign_date_parser = subparsers.add_parser(
+        "assign-date",
+        help="Assign a specific date to file(s)",
+        description="Set modification date for media file(s) or all files in a folder",
+    )
+    assign_date_parser.add_argument(
+        "source",
+        help="Source file or folder",
+    )
+    assign_date_parser.add_argument(
+        "date",
+        help="Date to assign (formats: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DD HH:MM, YYYY-MM-DD HH:MM:SS)",
+    )
+    assign_date_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be done without making changes",
+    )
+
     return parser
 
 
@@ -240,6 +261,13 @@ def main() -> None:
                 dry_run=args.dry_run,
                 interactive=not args.no_interactive,
                 display_thresholds=args.thresholds,
+            )
+
+        elif args.command == "assign-date":
+            assign_date(
+                source=args.source,
+                date_str=args.date,
+                dry_run=args.dry_run,
             )
 
     except KeyboardInterrupt:
