@@ -1,41 +1,14 @@
+"""Organize media files into dated folder structures."""
+
 import os
 import shutil
 from collections import Counter
 from datetime import datetime
-from enum import Enum, auto
-from typing import List, Tuple, Set, Optional
+from typing import List, Tuple
+
 import exifread
 
-# --- Configuration ---
-ROOT: str = "/Volumes/Family/Incoming"
-PHOTO_ROOT: str = "/Volumes/Family/Photos"
-VIDEO_ROOT: str = "/Volumes/Family/Videos"
-
-PHOTO_EXT: Set[str] = {
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".heic",
-    ".tif",
-    ".tiff",
-    ".nef",
-    ".cr2",
-    ".arw",
-}
-VIDEO_EXT: Set[str] = {".mp4", ".mov", ".avi", ".mkv", ".mts"}
-
-DRY_RUN: bool = True  # Set to False to actually move files
-INTERACTIVE: bool = True
-
-
-class FolderAction(Enum):
-    ACCEPT = auto()
-    RENAME = auto()
-    UNGROUP = auto()
-    SKIP = auto()
-
-
-# --- Functions ---
+from common import PHOTO_EXT, VIDEO_EXT, FolderAction
 
 
 def get_photo_date(path: str) -> datetime:
@@ -112,7 +85,9 @@ def prompt_user(
     return FolderAction.ACCEPT, name
 
 
-def move_individual_files(src_folder: str, photo_root: str, video_root: str) -> None:
+def move_individual_files(
+    src_folder: str, photo_root: str, video_root: str, dry_run: bool
+) -> None:
     """Moves files out of the folder individually into YYYY/MM/ structure."""
     for root, _, files in os.walk(src_folder):
         for name in files:
@@ -139,13 +114,13 @@ def move_individual_files(src_folder: str, photo_root: str, video_root: str) -> 
                 print(f"  [!] File already exists, skipping: {name}")
                 continue
 
-            if DRY_RUN:
+            if dry_run:
                 print(f"  [DRY RUN] Would move file: {name} -> {dest_dir}")
             else:
                 print(f"  --> Moving file: {name}")
                 shutil.move(path, dest_path)
 
-    if not DRY_RUN:
+    if not dry_run:
         try:
             if not os.listdir(src_folder):
                 os.rmdir(src_folder)
@@ -154,7 +129,7 @@ def move_individual_files(src_folder: str, photo_root: str, video_root: str) -> 
 
 
 def move_entire_folder(
-    src: str, dest_root: str, year: int, month: int, name: str
+    src: str, dest_root: str, year: int, month: int, name: str, dry_run: bool
 ) -> None:
     """Moves the entire directory into the Year/Month structure."""
     dest_dir = os.path.join(dest_root, str(year), f"{month:02d}")
@@ -165,22 +140,31 @@ def move_entire_folder(
         print(f"  [!] Destination folder already exists: {dest_path}")
         return
 
-    if DRY_RUN:
+    if dry_run:
         print(f"  [DRY RUN] Would move folder: {src} -> {dest_path}")
     else:
         print(f"  --> Moving folder: {name} into {year}/{month:02d}/")
         shutil.move(src, dest_path)
 
 
-# --- Main Logic ---
+def organize(
+    source: str, photo_dest: str, video_dest: str, dry_run: bool, interactive: bool
+) -> None:
+    """
+    Organize media files from source into photo and video destinations.
 
-
-def main() -> None:
-    if not os.path.exists(ROOT):
-        print(f"Error: {ROOT} is not accessible.")
+    Args:
+        source: Source directory to scan
+        photo_dest: Destination directory for photos
+        video_dest: Destination directory for videos
+        dry_run: If True, only show what would be done
+        interactive: If True, prompt user for actions on each folder
+    """
+    if not os.path.exists(source):
+        print(f"Error: {source} is not accessible.")
         return
 
-    for entry in os.scandir(ROOT):
+    for entry in os.scandir(source):
         if not entry.is_dir():
             continue
 
@@ -196,12 +180,12 @@ def main() -> None:
             continue
 
         year, month = choose_target_date(dates)
-        target_root = PHOTO_ROOT if photos >= videos else VIDEO_ROOT
+        target_root = photo_dest if photos >= videos else video_dest
 
         action = FolderAction.ACCEPT
         final_name = folder_name
 
-        if INTERACTIVE:
+        if interactive:
             action, final_name = prompt_user(folder_name, year, month, photos + videos)
 
         if action == FolderAction.SKIP:
@@ -209,11 +193,7 @@ def main() -> None:
             continue
         elif action == FolderAction.UNGROUP:
             print(f"Ungrouping {folder_name}...")
-            move_individual_files(folder_path, PHOTO_ROOT, VIDEO_ROOT)
+            move_individual_files(folder_path, photo_dest, video_dest, dry_run)
         else:
             # Covers ACCEPT and RENAME
-            move_entire_folder(folder_path, target_root, year, month, final_name)
-
-
-if __name__ == "__main__":
-    main()
+            move_entire_folder(folder_path, target_root, year, month, final_name, dry_run)

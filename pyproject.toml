@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "media-janitor"
+version = "1.0.0"
+description = "A CLI tool for organizing photo and video libraries"
+readme = "WARP.md"
+requires-python = ">=3.10"
+dependencies = [
+    "ExifRead>=3.0.0",
+]
+
+[project.scripts]
+media-janitor = "cli:main"
+
+[tool.setuptools]
+py-modules = ["__init__", "cli", "common", "organize", "flatten", "count"]

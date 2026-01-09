@@ -1,35 +1,10 @@
+"""Analyze and display folder statistics in a tree view."""
+
 import os
-import argparse
 from pathlib import Path
-from typing import Dict, Set
-from dataclasses import dataclass
+from typing import Dict
 
-PHOTO_EXT: Set[str] = {
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".heic",
-    ".tif",
-    ".tiff",
-    ".nef",
-    ".cr2",
-    ".arw",
-}
-
-VIDEO_EXT: Set[str] = {".mp4", ".mov", ".avi", ".mkv", ".mts"}
-
-
-@dataclass
-class Stats:
-    Photo: int = 0
-    Video: int = 0
-    Other: int = 0
-
-    def __iadd__(self, other: "Stats") -> "Stats":
-        self.Photo += other.Photo
-        self.Video += other.Video
-        self.Other += other.Other
-        return self
+from common import PHOTO_EXT, VIDEO_EXT, Stats
 
 
 def get_folder_stats(root_path: Path) -> Dict[Path, Stats]:
@@ -91,12 +66,14 @@ def print_tree(path: Path, stats: Dict[Path, Stats], prefix: str = "") -> None:
         print_tree(subdir, stats, new_prefix)
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Count files in folders recursively.")
-    parser.add_argument("root", help="The root directory to scan")
-    args = parser.parse_args()
+def display_count(root: str) -> None:
+    """
+    Display folder statistics for the given root directory.
 
-    root_path = Path(args.root).expanduser().resolve()
+    Args:
+        root: The root directory to scan
+    """
+    root_path = Path(root).expanduser().resolve()
 
     if not root_path.exists() or not root_path.is_dir():
         print(f"Error: {root_path} is not a valid directory.")
@@ -108,7 +85,3 @@ def main() -> None:
     folder_stats = get_folder_stats(root_path)
     print_tree(root_path, folder_stats)
     print("-" * 40)
-
-
-if __name__ == "__main__":
-    main()
