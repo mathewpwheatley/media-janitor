@@ -5,10 +5,20 @@ import shutil
 from collections import Counter
 from datetime import datetime
 from typing import List, Tuple
+from enum import Enum, auto
 
 import exifread
 
-from common import PHOTO_EXT, VIDEO_EXT, FolderAction
+from constants import PHOTO_EXT, VIDEO_EXT
+
+
+class FolderAction(Enum):
+    """Actions that can be taken on a folder during organization."""
+
+    ACCEPT = auto()
+    RENAME = auto()
+    UNGROUP = auto()
+    SKIP = auto()
 
 
 def get_photo_date(path: str) -> datetime:
@@ -196,4 +206,6 @@ def organize(
             move_individual_files(folder_path, photo_dest, video_dest, dry_run)
         else:
             # Covers ACCEPT and RENAME
-            move_entire_folder(folder_path, target_root, year, month, final_name, dry_run)
+            move_entire_folder(
+                folder_path, target_root, year, month, final_name, dry_run
+            )

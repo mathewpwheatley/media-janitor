@@ -10,10 +10,11 @@ readme = "WARP.md"
 requires-python = ">=3.10"
 dependencies = [
     "ExifRead>=3.0.0",
+    "Pillow>=10.0.0",
 ]
 
 [project.scripts]
 media-janitor = "cli:main"
 
 [tool.setuptools]
-py-modules = ["__init__", "cli", "common", "organize", "flatten", "count"]
+py-modules = ["__init__", "cli", "constants", "organize", "flatten", "count", "dedupe", "fix_dates", "health_check"]

@@ -3,8 +3,24 @@
 import os
 from pathlib import Path
 from typing import Dict
+from dataclasses import dataclass
 
-from common import PHOTO_EXT, VIDEO_EXT, Stats
+from constants import PHOTO_EXT, VIDEO_EXT
+
+
+@dataclass
+class Stats:
+    """Statistics for photo, video, and other file counts."""
+
+    Photo: int = 0
+    Video: int = 0
+    Other: int = 0
+
+    def __iadd__(self, other: "Stats") -> "Stats":
+        self.Photo += other.Photo
+        self.Video += other.Video
+        self.Other += other.Other
+        return self
 
 
 def get_folder_stats(root_path: Path) -> Dict[Path, Stats]:

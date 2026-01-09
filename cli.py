@@ -8,6 +8,9 @@ from __init__ import __version__
 from organize import organize
 from flatten import flatten_folder
 from count import display_count
+from dedupe import dedupe
+from fix_dates import fix_dates
+from health_check import health_check
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -29,18 +32,17 @@ def create_parser() -> argparse.ArgumentParser:
         description="Sort folders from source directory into dated year/month structure",
     )
     organize_parser.add_argument(
-        "--source",
-        required=True,
+        "source",
         help="Source directory to scan for media folders",
     )
     organize_parser.add_argument(
-        "--photo-dest",
-        required=True,
+        "photo_dest",
+        metavar="photo-dest",
         help="Destination directory for photo folders",
     )
     organize_parser.add_argument(
-        "--video-dest",
-        required=True,
+        "video_dest",
+        metavar="video-dest",
         help="Destination directory for video folders",
     )
     organize_parser.add_argument(
@@ -86,6 +88,66 @@ def create_parser() -> argparse.ArgumentParser:
         help="Root directory to scan",
     )
 
+    # Dedupe command
+    dedupe_parser = subparsers.add_parser(
+        "dedupe",
+        help="Find and remove duplicate files",
+        description="Scan for duplicate files using content hash and optionally remove them",
+    )
+    dedupe_parser.add_argument(
+        "root",
+        help="Root directory to scan for duplicates",
+    )
+    dedupe_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be done without making changes",
+    )
+
+    # Fix-dates command
+    fix_dates_parser = subparsers.add_parser(
+        "fix-dates",
+        help="Fix file dates using EXIF or filename patterns",
+        description="Correct file modification dates using EXIF metadata or filename patterns",
+    )
+    fix_dates_parser.add_argument(
+        "root",
+        help="Root directory to scan",
+    )
+    fix_dates_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be done without making changes",
+    )
+
+    # Health-check command
+    health_check_parser = subparsers.add_parser(
+        "health-check",
+        help="Check media library health",
+        description=f"Scan for corrupted files, ghost files, and thumbnails with date-based thresholds",
+    )
+    group = health_check_parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "root",
+        nargs="?",
+        help="Root directory to scan",
+    )
+    group.add_argument(
+        "--thresholds",
+        action="store_true",
+        help="Prints date-based thresholds for reference",
+    )
+    health_check_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be done without making changes ",
+    )
+    health_check_parser.add_argument(
+        "--no-interactive",
+        action="store_true",
+        help="Run in batch mode without prompting for actions",
+    )
+
     return parser
 
 
@@ -100,6 +162,7 @@ def main() -> None:
 
     try:
         if args.command == "organize":
+            print(f"DEBUG: {args}")
             organize(
                 source=args.source,
                 photo_dest=args.photo_dest,
@@ -120,6 +183,26 @@ def main() -> None:
 
         elif args.command == "count":
             display_count(root=args.root)
+
+        elif args.command == "dedupe":
+            dedupe(
+                root=args.root,
+                dry_run=args.dry_run,
+            )
+
+        elif args.command == "fix-dates":
+            fix_dates(
+                root=args.root,
+                dry_run=args.dry_run,
+            )
+
+        elif args.command == "health-check":
+            health_check(
+                root=args.root,
+                dry_run=args.dry_run,
+                interactive=not args.no_interactive,
+                display_thresholds=args.thresholds,
+            )
 
     except KeyboardInterrupt:
         print("\nOperation cancelled by user.")
