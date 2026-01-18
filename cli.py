@@ -54,7 +54,7 @@ def create_parser() -> argparse.ArgumentParser:
     organize_parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes (default: True)",
+        help="Show what would be done without making changes",
     )
     organize_parser.add_argument(
         "--no-interactive",
